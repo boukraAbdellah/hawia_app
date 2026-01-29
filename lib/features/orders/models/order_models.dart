@@ -81,6 +81,8 @@ class PendingOrder with _$PendingOrder {
     required DeliveryLocation deliveryLocation,
     required DateTime deliveryDate,
     required String rentalType, // once, monthly, annual
+    int? rentalDuration, // Duration for 'once' type rentals
+    int? unloadCount, // Number of unloads for monthly/yearly rentals
     required String status,
     required DateTime createdAt,
     required bool applied, // Has your company submitted offer?

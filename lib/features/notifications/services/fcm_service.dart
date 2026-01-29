@@ -15,15 +15,26 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 class FCMService {
   static final FCMService _instance = FCMService._internal();
-  factory FCMService() => _instance;
-  FCMService._internal();
+  factory FCMService() {
+    debugPrint('🏭 FCMService factory called, instance: ${identityHashCode(_instance)}');
+    return _instance;
+  }
+  FCMService._internal() {
+    debugPrint('🏗️ FCMService._internal() constructor called (singleton created)');
+    debugPrint('   Instance ID: ${identityHashCode(this)}');
+  }
 
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
   String? _fcmToken;
-  String? get fcmToken => _fcmToken;
+  String? get fcmToken {
+    debugPrint('🔍 FCM Token getter called');
+    debugPrint('   Value: ${_fcmToken != null ? "${_fcmToken!.substring(0, 30)}..." : "NULL"}');
+    debugPrint('   🆔 FCMService instance: ${identityHashCode(this)}');
+    return _fcmToken;
+  }
 
   final _notificationTapController = StreamController<Map<String, dynamic>>.broadcast();
   Stream<Map<String, dynamic>> get onNotificationTap => _notificationTapController.stream;
@@ -31,6 +42,7 @@ class FCMService {
   // Callbacks for refreshing providers when notifications arrive
   Function()? onNotificationReceived;
   Function()? onIncrementBadge;
+  Function(String token)? onTokenReceived;
 
   // Update app icon badge using flutter_local_notifications
   Future<void> updateBadge(int count) async {
@@ -56,7 +68,10 @@ class FCMService {
   // Initialize FCM
   Future<void> initialize() async {
     try {
+      debugPrint('\n📱 ===== FCM INITIALIZATION START =====');
+      
       // Request permission
+      debugPrint('   Requesting FCM permissions...');
       final settings = await _firebaseMessaging.requestPermission(
         alert: true,
         badge: true,
@@ -65,20 +80,44 @@ class FCMService {
       );
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        debugPrint('✅ FCM Permission granted');
+        debugPrint('   ✅ FCM Permission granted');
 
         // Get FCM token
+        debugPrint('   Getting FCM token...');
         _fcmToken = await _firebaseMessaging.getToken();
-        debugPrint('📱 FCM Token: $_fcmToken');
+        debugPrint('   📱 FCM Token received: ${_fcmToken?.substring(0, 30)}...');
+        debugPrint('   💾 Token STORED in _fcmToken variable');
+        debugPrint('   🆔 FCMService instance: ${identityHashCode(this)}');
+        
+        // Notify callback if token is available
+        if (_fcmToken != null) {
+          debugPrint('   🔔 Checking if callback is set...');
+          if (onTokenReceived != null) {
+            debugPrint('   ✅ Callback IS set, calling it now...');
+            onTokenReceived?.call(_fcmToken!);
+            debugPrint('   ✅ Callback called');
+          } else {
+            debugPrint('   ❌ WARNING: onTokenReceived callback is NULL!');
+            debugPrint('   ⚠️  Token will NOT be sent to backend!');
+          }
+        } else {
+          debugPrint('   ❌ WARNING: FCM token is NULL after getToken()!');
+        }
+        debugPrint('===== FCM INITIALIZATION COMPLETE =====\n');
 
         // Initialize local notifications
         await _initializeLocalNotifications();
 
         // Listen to token refresh
         _firebaseMessaging.onTokenRefresh.listen((newToken) {
+          debugPrint('🔄 FCM Token refreshing...');
+          debugPrint('   Old token: ${_fcmToken?.substring(0, 30)}...');
           _fcmToken = newToken;
-          debugPrint('🔄 FCM Token refreshed: $newToken');
-          // Token will be sent to backend by the app layer
+          debugPrint('   New token: ${newToken.substring(0, 30)}...');
+          debugPrint('   💾 Token UPDATED in _fcmToken variable');
+          debugPrint('   🆔 FCMService instance: ${identityHashCode(this)}');
+          // Notify callback when token is refreshed
+          onTokenReceived?.call(newToken);
         });
 
         // Handle foreground messages

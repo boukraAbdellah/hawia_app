@@ -451,6 +451,10 @@ mixin _$PendingOrder {
   DateTime get deliveryDate => throw _privateConstructorUsedError;
   String get rentalType =>
       throw _privateConstructorUsedError; // once, monthly, annual
+  int? get rentalDuration =>
+      throw _privateConstructorUsedError; // Duration for 'once' type rentals
+  int? get unloadCount =>
+      throw _privateConstructorUsedError; // Number of unloads for monthly/yearly rentals
   String get status => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
   bool get applied =>
@@ -486,6 +490,8 @@ abstract class $PendingOrderCopyWith<$Res> {
     DeliveryLocation deliveryLocation,
     DateTime deliveryDate,
     String rentalType,
+    int? rentalDuration,
+    int? unloadCount,
     String status,
     DateTime createdAt,
     bool applied,
@@ -520,6 +526,8 @@ class _$PendingOrderCopyWithImpl<$Res, $Val extends PendingOrder>
     Object? deliveryLocation = null,
     Object? deliveryDate = null,
     Object? rentalType = null,
+    Object? rentalDuration = freezed,
+    Object? unloadCount = freezed,
     Object? status = null,
     Object? createdAt = null,
     Object? applied = null,
@@ -577,6 +585,16 @@ class _$PendingOrderCopyWithImpl<$Res, $Val extends PendingOrder>
                     ? _value.rentalType
                     : rentalType // ignore: cast_nullable_to_non_nullable
                         as String,
+            rentalDuration:
+                freezed == rentalDuration
+                    ? _value.rentalDuration
+                    : rentalDuration // ignore: cast_nullable_to_non_nullable
+                        as int?,
+            unloadCount:
+                freezed == unloadCount
+                    ? _value.unloadCount
+                    : unloadCount // ignore: cast_nullable_to_non_nullable
+                        as int?,
             status:
                 null == status
                     ? _value.status
@@ -633,6 +651,8 @@ abstract class _$$PendingOrderImplCopyWith<$Res>
     DeliveryLocation deliveryLocation,
     DateTime deliveryDate,
     String rentalType,
+    int? rentalDuration,
+    int? unloadCount,
     String status,
     DateTime createdAt,
     bool applied,
@@ -667,6 +687,8 @@ class __$$PendingOrderImplCopyWithImpl<$Res>
     Object? deliveryLocation = null,
     Object? deliveryDate = null,
     Object? rentalType = null,
+    Object? rentalDuration = freezed,
+    Object? unloadCount = freezed,
     Object? status = null,
     Object? createdAt = null,
     Object? applied = null,
@@ -724,6 +746,16 @@ class __$$PendingOrderImplCopyWithImpl<$Res>
                 ? _value.rentalType
                 : rentalType // ignore: cast_nullable_to_non_nullable
                     as String,
+        rentalDuration:
+            freezed == rentalDuration
+                ? _value.rentalDuration
+                : rentalDuration // ignore: cast_nullable_to_non_nullable
+                    as int?,
+        unloadCount:
+            freezed == unloadCount
+                ? _value.unloadCount
+                : unloadCount // ignore: cast_nullable_to_non_nullable
+                    as int?,
         status:
             null == status
                 ? _value.status
@@ -763,6 +795,8 @@ class _$PendingOrderImpl implements _PendingOrder {
     required this.deliveryLocation,
     required this.deliveryDate,
     required this.rentalType,
+    this.rentalDuration,
+    this.unloadCount,
     required this.status,
     required this.createdAt,
     required this.applied,
@@ -796,6 +830,12 @@ class _$PendingOrderImpl implements _PendingOrder {
   final String rentalType;
   // once, monthly, annual
   @override
+  final int? rentalDuration;
+  // Duration for 'once' type rentals
+  @override
+  final int? unloadCount;
+  // Number of unloads for monthly/yearly rentals
+  @override
   final String status;
   @override
   final DateTime createdAt;
@@ -808,7 +848,7 @@ class _$PendingOrderImpl implements _PendingOrder {
 
   @override
   String toString() {
-    return 'PendingOrder(id: $id, orderNumber: $orderNumber, customerId: $customerId, customerName: $customerName, customerPhone: $customerPhone, containerType: $containerType, containerSize: $containerSize, deliveryLocation: $deliveryLocation, deliveryDate: $deliveryDate, rentalType: $rentalType, status: $status, createdAt: $createdAt, applied: $applied, distance: $distance)';
+    return 'PendingOrder(id: $id, orderNumber: $orderNumber, customerId: $customerId, customerName: $customerName, customerPhone: $customerPhone, containerType: $containerType, containerSize: $containerSize, deliveryLocation: $deliveryLocation, deliveryDate: $deliveryDate, rentalType: $rentalType, rentalDuration: $rentalDuration, unloadCount: $unloadCount, status: $status, createdAt: $createdAt, applied: $applied, distance: $distance)';
   }
 
   @override
@@ -835,6 +875,10 @@ class _$PendingOrderImpl implements _PendingOrder {
                 other.deliveryDate == deliveryDate) &&
             (identical(other.rentalType, rentalType) ||
                 other.rentalType == rentalType) &&
+            (identical(other.rentalDuration, rentalDuration) ||
+                other.rentalDuration == rentalDuration) &&
+            (identical(other.unloadCount, unloadCount) ||
+                other.unloadCount == unloadCount) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
@@ -857,6 +901,8 @@ class _$PendingOrderImpl implements _PendingOrder {
     deliveryLocation,
     deliveryDate,
     rentalType,
+    rentalDuration,
+    unloadCount,
     status,
     createdAt,
     applied,
@@ -889,6 +935,8 @@ abstract class _PendingOrder implements PendingOrder {
     required final DeliveryLocation deliveryLocation,
     required final DateTime deliveryDate,
     required final String rentalType,
+    final int? rentalDuration,
+    final int? unloadCount,
     required final String status,
     required final DateTime createdAt,
     required final bool applied,
@@ -920,6 +968,10 @@ abstract class _PendingOrder implements PendingOrder {
   DateTime get deliveryDate;
   @override
   String get rentalType; // once, monthly, annual
+  @override
+  int? get rentalDuration; // Duration for 'once' type rentals
+  @override
+  int? get unloadCount; // Number of unloads for monthly/yearly rentals
   @override
   String get status;
   @override

@@ -86,10 +86,12 @@ class _OrderNotificationsTabState extends ConsumerState<_OrderNotificationsTab> 
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    // Load data on init AND refresh unread count
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(adminNotificationsProvider.notifier).loadNotifications();
-      // ⚠️ CRITICAL: Refresh unread count when entering screen
+    // Load data on init AND mark all as read
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref.read(adminNotificationsProvider.notifier).loadNotifications();
+      // ⚠️ CRITICAL: Mark all as read when opening notification screen
+      await ref.read(adminNotificationsProvider.notifier).markAllAsRead();
+      // Reset unread count to 0
       ref.read(unreadCountProvider.notifier).refresh();
     });
   }
@@ -173,14 +175,16 @@ class _OrderNotificationsTabState extends ConsumerState<_OrderNotificationsTab> 
   }
 
   void _onNotificationTap(CompanyNotification notification) async {
+    // Just mark as read - don't navigate (routes are web-only)
     if (!notification.isRead) {
       await ref.read(adminNotificationsProvider.notifier).markAsRead(notification.id);
       ref.read(unreadCountProvider.notifier).decrementCount();
     }
-
-    if (notification.globalOrderId != null) {
-      context.push('/orders/${notification.globalOrderId}');
-    }
+    
+    // Navigation disabled - web routes don't exist in mobile app
+    // if (notification.globalOrderId != null) {
+    //   context.push('/orders/${notification.globalOrderId}');
+    // }
   }
 
   void _onNotificationDelete(String notificationId) async {

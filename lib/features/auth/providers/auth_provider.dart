@@ -94,24 +94,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // Initialize notification services
   void _initializeNotificationServices(String token) async {
     try {
-      print('🔔 Initializing notification services...');
+      print('\n🔔 ===== INITIALIZING NOTIFICATION SERVICES (ON LOGIN) =====');
+      print('   Timestamp: ${DateTime.now()}');
       
-      // Wait a bit for FCM to initialize
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      // Get FCM token
+      // Try to get FCM token if already available
       final fcmToken = FCMService().fcmToken;
-      print('📱 FCM Token: $fcmToken');
-      
+      print('   Checking FCM token availability...');
       if (fcmToken != null) {
-        // Send FCM token to backend
-        print('📤 Sending FCM token to backend...');
+        print('   ✅ FCM Token IS available: ${fcmToken.substring(0, 30)}...');
+        print('   📤 Sending to backend via login flow...');
         final notificationApi = NotificationApiService(ApiService());
         await notificationApi.updateFcmToken(fcmToken);
-        print('✅ FCM token sent successfully');
+        print('   ✅ Token sent successfully from login flow');
       } else {
-        print('⚠️ FCM token is null - notifications may not work');
+        print('   ⏳ FCM token is NULL (not ready yet)');
+        print('   ℹ️  Token will be sent via callback when it becomes available');
+        print('   ℹ️  Check if callback was triggered earlier in logs');
       }
+      print('===== NOTIFICATION SERVICES CHECK COMPLETE =====\n');
 
       // Connect WebSocket for real-time notifications
       print('🔌 Connecting WebSocket...');

@@ -14,10 +14,37 @@ class PendingOrdersScreen extends ConsumerStatefulWidget {
       _PendingOrdersScreenState();
 }
 
-class _PendingOrdersScreenState extends ConsumerState<PendingOrdersScreen> {
+class _PendingOrdersScreenState extends ConsumerState<PendingOrdersScreen>
+    with RouteAware {
   String? _containerTypeFilter;
   String? _containerSizeFilter;
   String _sortBy = 'distance'; // distance, date, type
+
+  @override
+  void initState() {
+    super.initState();
+    // Load orders when screen is first opened
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(pendingOrdersProvider.notifier).fetchOrders();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Subscribe to route changes to detect when coming back to this screen
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      // Will trigger didPopNext when returning to this screen
+    }
+  }
+
+  @override
+  void didPopNext() {
+    // Called when returning to this screen from another screen
+    debugPrint('🔄 Returned to Pending Orders - refreshing...');
+    ref.read(pendingOrdersProvider.notifier).fetchOrders();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -462,6 +489,25 @@ class _OrderCard extends StatelessWidget {
                   ),
                 ],
               ),
+              // Show unload count for monthly/yearly rentals
+              if (order.unloadCount != null && 
+                  (order.rentalType == 'monthly' || order.rentalType == 'annual')) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.recycling, size: 16, color: Colors.orange),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${order.unloadCount} عملية تفريغ',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.orange,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               if (order.customerName != null) ...[
                 const SizedBox(height: 4),
                 Row(

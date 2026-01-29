@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' as intl;
-import '../../../core/config/app_theme.dart';
+import '../../../core/config/app_theme.dart'; // Corrected back to your path
 import '../providers/chat_providers.dart';
 import '../models/company_chat_message.dart';
 
@@ -17,91 +17,65 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
   final ScrollController _scrollController = ScrollController();
 
   bool _shouldScrollToBottom = true;
-  bool _isLoadingMore = false;
-  bool _isInitialized = false; // ← NEW: prevents load-more on initial render
-
+  bool _isInitialized = false;
   double? _previousMaxScrollExtent;
 
   @override
   void initState() {
     super.initState();
-
     _scrollController.addListener(_scrollListener);
-
-    // Initial jump to bottom + mark as initialized after positioning
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-        if (mounted) {
-          setState(() {
-            _isInitialized =
-                true; // ← NEW: now allow loading more when scrolling up
-          });
-        }
-      }
-    });
   }
 
   void _scrollListener() {
     if (!_scrollController.hasClients) return;
 
     final pos = _scrollController.position;
-    final nearBottom = pos.pixels >= pos.maxScrollExtent - 150;
-    final nearTop = pos.pixels <= pos.minScrollExtent + 300;
+    final nearBottom = pos.pixels >= pos.maxScrollExtent - 200;
+    final nearTop = pos.pixels <= pos.minScrollExtent + 100;
 
-    // Update auto-scroll flag
+    // If the user scrolls up, we stop auto-scrolling to the bottom
     if (nearBottom != _shouldScrollToBottom) {
       setState(() => _shouldScrollToBottom = nearBottom);
     }
 
-    // Prevent loading more until after initial positioning
-    if (!_isInitialized) return;
-
-    final chatNotifier = ref.read(chatProvider.notifier);
-    if (nearTop && !_isLoadingMore && chatNotifier.state.hasMorePages) {
-      _isLoadingMore = true;
+    // Pagination logic
+    final chatState = ref.read(chatProvider);
+    if (nearTop &&
+        chatState.hasMorePages &&
+        !chatState.isLoadingMore &&
+        _isInitialized) {
       _previousMaxScrollExtent = pos.maxScrollExtent;
-
-      chatNotifier.loadMoreMessages().whenComplete(() {
-        if (mounted) {
-          _isLoadingMore = false;
-          _adjustScrollAfterLoadMore();
-        }
+      ref.read(chatProvider.notifier).loadMoreMessages().then((_) {
+        _adjustScrollAfterLoadMore();
       });
     }
   }
 
   void _adjustScrollAfterLoadMore() {
-    if (!_scrollController.hasClients || _previousMaxScrollExtent == null)
-      return;
+    if (_previousMaxScrollExtent == null) return;
 
-    final newMax = _scrollController.position.maxScrollExtent;
-    final addedHeight = newMax - _previousMaxScrollExtent!;
-
-    if (addedHeight > 0) {
-      _scrollController.jumpTo(_scrollController.offset + addedHeight);
-    }
-
-    _previousMaxScrollExtent = null;
-  }
-
-  @override
-  void dispose() {
-    _scrollController.removeListener(_scrollListener);
-    _scrollController.dispose();
-    _messageController.dispose();
-    super.dispose();
+    // After loading more, the list expands at the top.
+    // We jump to the difference to keep the user's view stable.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        final newMax = _scrollController.position.maxScrollExtent;
+        final addedHeight = newMax - _previousMaxScrollExtent!;
+        if (addedHeight > 0) {
+          _scrollController.jumpTo(_scrollController.offset + addedHeight);
+        }
+        _previousMaxScrollExtent = null;
+      }
+    });
   }
 
   void _scrollToBottom({bool animate = true}) {
     if (!_scrollController.hasClients) return;
 
     final target = _scrollController.position.maxScrollExtent;
-
     if (animate) {
       _scrollController.animateTo(
         target,
-        duration: const Duration(milliseconds: 280),
+        duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
     } else {
@@ -125,25 +99,63 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     }
   }
 
-  String _formatMessageTime(DateTime time) {
-    return intl.DateFormat('HH:mm', 'ar').format(time);
+  bool _isSameDay(DateTime d1, DateTime d2) =>
+      d1.year == d2.year && d1.month == d2.month && d1.day == d2.day;
+
+  Widget _buildDateHeader(DateTime date) {
+    String label;
+    final now = DateTime.now();
+    if (_isSameDay(date, now)) {
+      label = 'اليوم';
+    } else if (_isSameDay(date, now.subtract(const Duration(days: 1)))) {
+      label = 'أمس';
+    } else {
+      label = intl.DateFormat('d MMMM yyyy', 'ar').format(date);
+    }
+
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatProvider);
 
-    // Auto-scroll on new messages (only if user was near bottom)
+    // Watch for state changes to handle scrolling
     ref.listen(chatProvider, (previous, next) {
-      if (previous == null) return;
+      // Handle initial load completion
+      if (previous?.isLoading == true && next.isLoading == false) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom(animate: false);
+          setState(() => _isInitialized = true);
+        });
+      }
 
-      if (next.messages.length > previous.messages.length &&
-          _shouldScrollToBottom) {
-        _scrollToBottom(animate: true);
+      // Handle new incoming messages
+      if (previous != null && next.messages.length > previous.messages.length) {
+        final isNewest = next.messages.last.id != previous.messages.last.id;
+        if (isNewest && _shouldScrollToBottom) {
+          _scrollToBottom(animate: true);
+        }
       }
     });
-
-    final showLoadingHeader = chatState.hasMorePages && chatState.isLoadingMore;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
@@ -151,40 +163,57 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         title: const Text('الدعم الفني', style: TextStyle(fontSize: 18)),
+        centerTitle: true,
       ),
       body:
           chatState.isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              )
               : Column(
                 children: [
                   Expanded(
                     child: ListView.builder(
                       controller: _scrollController,
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount:
                           chatState.messages.length +
-                          (showLoadingHeader ? 1 : 0),
+                          (chatState.isLoadingMore ? 1 : 0),
                       itemBuilder: (context, index) {
-                        if (showLoadingHeader && index == 0) {
+                        if (chatState.isLoadingMore && index == 0) {
                           return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 20),
-                            child: Center(child: CircularProgressIndicator()),
+                            padding: EdgeInsets.all(16),
+                            child: Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
                           );
                         }
 
-                        final msgIndex = showLoadingHeader ? index - 1 : index;
-                        if (msgIndex >= chatState.messages.length) {
-                          return const SizedBox.shrink();
-                        }
-
+                        final msgIndex =
+                            chatState.isLoadingMore ? index - 1 : index;
                         final msg = chatState.messages[msgIndex];
-                        final isSupport =
-                            msg.senderType == SenderType.superAdmin;
 
-                        return _MessageBubble(
-                          message: msg,
-                          isSupport: isSupport,
-                          time: _formatMessageTime(msg.createdAt),
+                        // Check if we need to show a date header
+                        bool showHeader =
+                            msgIndex == 0 ||
+                            !_isSameDay(
+                              msg.createdAt,
+                              chatState.messages[msgIndex - 1].createdAt,
+                            );
+
+                        return Column(
+                          children: [
+                            if (showHeader) _buildDateHeader(msg.createdAt),
+                            _MessageBubble(
+                              message: msg,
+                              isSupport:
+                                  msg.senderType == SenderType.superAdmin,
+                              time: intl.DateFormat(
+                                'HH:mm',
+                                'ar',
+                              ).format(msg.createdAt),
+                            ),
+                          ],
                         );
                       },
                     ),
@@ -210,14 +239,12 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
       ),
       child: SafeArea(
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
               child: TextField(
                 controller: _messageController,
                 textDirection: TextDirection.rtl,
                 maxLines: null,
-                textInputAction: TextInputAction.newline,
                 decoration: InputDecoration(
                   hintText: 'اكتب رسالتك...',
                   hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -230,20 +257,6 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
                     borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(
-                      color: Colors.grey.shade200,
-                      width: 1,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(
-                      color: AppColors.primary.withOpacity(0.3),
-                      width: 1.5,
-                    ),
                   ),
                 ),
               ),
@@ -302,69 +315,44 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        mainAxisAlignment:
-            isSupport ? MainAxisAlignment.start : MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (isSupport) ...[
-            CircleAvatar(
-              radius: 14,
-              backgroundColor: AppColors.primary.withOpacity(0.1),
-              child: Icon(
-                Icons.support_agent,
-                size: 16,
-                color: AppColors.primary,
+    return Align(
+      alignment: isSupport ? Alignment.centerLeft : Alignment.centerRight,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSupport ? const Color(0xFFE4E6EB) : AppColors.primary,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(isSupport ? 0 : 16),
+            bottomRight: Radius.circular(isSupport ? 16 : 0),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              message.message,
+              style: TextStyle(
+                color: isSupport ? Colors.black87 : Colors.white,
+                fontSize: 14,
+              ),
+              textDirection: TextDirection.rtl,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              time,
+              style: TextStyle(
+                fontSize: 9,
+                color: isSupport ? Colors.grey.shade600 : Colors.white70,
               ),
             ),
-            const SizedBox(width: 8),
           ],
-          Flexible(
-            child: Column(
-              crossAxisAlignment:
-                  isSupport ? CrossAxisAlignment.start : CrossAxisAlignment.end,
-              children: [
-                if (isSupport)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      'الدعم الفني',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color:
-                        isSupport ? const Color(0xFFE4E6EB) : AppColors.primary,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    message.message,
-                    style: TextStyle(
-                      color: isSupport ? Colors.black87 : Colors.white,
-                      fontSize: 14,
-                    ),
-                    textDirection: TextDirection.rtl,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  time,
-                  style: TextStyle(fontSize: 9, color: Colors.grey.shade500),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

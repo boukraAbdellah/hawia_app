@@ -99,25 +99,63 @@ class _SubmitOfferDialogState extends ConsumerState<SubmitOfferDialog> {
                           style: const TextStyle(fontSize: 13),
                         ),
                         const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'نوع الإيجار: ${widget.order.rentalTypeLabel}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context).primaryColor,
-                              fontWeight: FontWeight.w500,
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).primaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'نوع الإيجار: ${widget.order.rentalTypeLabel}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).primaryColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ),
-                          ),
+                            // Show unload count for monthly/yearly rentals
+                            if (widget.order.unloadCount != null && 
+                                (widget.order.rentalType == 'monthly' || widget.order.rentalType == 'annual')) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.recycling,
+                                      size: 14,
+                                      color: Colors.orange,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${widget.order.unloadCount} عملية تفريغ',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.orange,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ),
@@ -130,7 +168,6 @@ class _SubmitOfferDialogState extends ConsumerState<SubmitOfferDialog> {
                     decoration: InputDecoration(
                       labelText: 'السعر الأساسي (ريال)',
                       prefixIcon: const Icon(Icons.attach_money),
-                      helperText: 'السعر قبل العمولة والضريبة',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/api_config.dart';
 import '../../../core/config/app_theme.dart';
+import '../../../shared/privacy_policy_page.dart';
+import '../../../shared/terms_and_conditions_page.dart';
 import '../providers/profile_providers.dart';
 import '../../auth/providers/auth_provider.dart';
 
@@ -110,30 +112,6 @@ class ProfileScreen extends ConsumerWidget {
                       ],
                     ),
 
-                    _buildSectionTitle('تفاصيل الحساب'),
-                    _InfoCard(
-                      children: [
-                        _InfoRow(
-                          icon: Icons.card_membership_rounded,
-                          label: 'باقة الاشتراك',
-                          value: _getPlanText(profile.company.plan),
-                          valueColor: AppColors.primary,
-                        ),
-                        _Divider(),
-                        _InfoRow(
-                          icon: Icons.layers_outlined,
-                          label: 'المستوى الحالي',
-                          value: 'المستوى ${profile.company.level}',
-                        ),
-                        _Divider(),
-                        _InfoRow(
-                          icon: Icons.pie_chart_outline_rounded,
-                          label: 'نسبة العمولة',
-                          value: '${profile.company.commissionPercentage}%',
-                        ),
-                      ],
-                    ),
-
                     _buildSectionTitle('المسؤول عن الحساب'),
                     _InfoCard(
                       children: [
@@ -147,6 +125,37 @@ class ProfileScreen extends ConsumerWidget {
                           icon: Icons.alternate_email_rounded,
                           label: 'البريد الإلكتروني',
                           value: profile.adminUser.email,
+                        ),
+                      ],
+                    ),
+
+                    _buildSectionTitle('الشروط والسياسات'),
+                    _InfoCard(
+                      children: [
+                        _ClickableInfoRow(
+                          icon: Icons.description_outlined,
+                          label: 'شروط الخدمة',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const TermsAndConditionsPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        _Divider(),
+                        _ClickableInfoRow(
+                          icon: Icons.privacy_tip_outlined,
+                          label: 'سياسة الخصوصية',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const PrivacyPolicyPage(),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -236,19 +245,6 @@ class ProfileScreen extends ConsumerWidget {
             ],
           ),
     );
-  }
-
-  static String _getPlanText(String plan) {
-    switch (plan) {
-      case 'basic':
-        return 'الأساسية';
-      case 'premium':
-        return 'المميزة';
-      case 'enterprise':
-        return 'الشركات';
-      default:
-        return plan;
-    }
   }
 }
 
@@ -351,6 +347,50 @@ class _InfoRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ClickableInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ClickableInfoRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        child: Row(
+          children: [
+            Icon(icon, size: 22, color: AppColors.primary),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: Colors.grey.shade400,
+            ),
+          ],
+        ),
       ),
     );
   }

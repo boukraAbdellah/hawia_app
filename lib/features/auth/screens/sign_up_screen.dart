@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
@@ -14,6 +15,8 @@ import '../models/region_city_models.dart';
 import '../widgets/custom_text_field.dart';
 import '../../../shared/widgets/loading_button.dart';
 import '../../../shared/widgets/phone_input_field.dart';
+import '../../../shared/terms_and_conditions_page.dart';
+import '../../../shared/privacy_policy_page.dart';
 import '../../../core/config/app_theme.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -57,6 +60,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   Region? _selectedRegion;
   City? _selectedCity;
   bool _isLoadingData = true;
+  bool _agreedToTerms = false;
 
   @override
   void initState() {
@@ -158,19 +162,25 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   Future<void> _requestCurrentLocation() async {
     try {
+      // Check if location service is enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('خدمة الموقع غير مفعلة', textDirection: TextDirection.rtl),
-              backgroundColor: Colors.red,
-            ),
-          );
+        // Ask user to enable location services - this opens system settings dialog
+        bool opened = await Geolocator.openLocationSettings();
+        if (!opened) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('الرجاء تفعيل خدمة الموقع من الإعدادات', textDirection: TextDirection.rtl),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
         }
         return;
       }
 
+      // Check permission status
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -189,17 +199,39 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
       if (permission == LocationPermission.deniedForever) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('إذن الموقع مرفوض بشكل دائم', textDirection: TextDirection.rtl),
-              backgroundColor: Colors.red,
+          // Show dialog to guide user to app settings
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('إذن الموقع مطلوب', textDirection: TextDirection.rtl),
+              content: const Text(
+                'الرجاء السماح بالوصول للموقع من إعدادات التطبيق',
+                textDirection: TextDirection.rtl,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('إلغاء', textDirection: TextDirection.rtl),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Geolocator.openAppSettings();
+                  },
+                  child: const Text('فتح الإعدادات', textDirection: TextDirection.rtl),
+                ),
+              ],
             ),
           );
         }
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition();
+      // Get current position
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      
       setState(() {
         _selectedLocation = LatLng(position.latitude, position.longitude);
         _latitudeController.text = position.latitude.toString();
@@ -208,6 +240,15 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
       // Move map to new location
       _mapController?.move(_selectedLocation, 13);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم تحديد موقعك بنجاح', textDirection: TextDirection.rtl),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -243,6 +284,17 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   void _handleSendVerificationCode() {
     print('🟡 _handleSendVerificationCode called');
+    
+    if (!_agreedToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('يجب الموافقة على شروط الخدمة وسياسة الخصوصية', textDirection: TextDirection.rtl),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
     if (_formKey.currentState!.validate()) {
       print('🟡 Form validation passed');
       if (_passwordController.text != _confirmPasswordController.text) {
@@ -735,8 +787,75 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 if (value != _passwordController.text) return 'كلمات المرور غير متطابقة';
                 return null;
               },
-            ),
-            const SizedBox(height: 40),
+            ),            const SizedBox(height: 20),
+            
+            // Terms and Privacy Agreement Checkbox
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Checkbox(
+                  value: _agreedToTerms,
+                  onChanged: (value) {
+                    setState(() => _agreedToTerms = value ?? false);
+                  },
+                  activeColor: AppColors.primary,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: RichText(
+                      text: TextSpan(
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black87,
+                          fontFamily: 'Tajawal',
+                        ),
+                        children: [
+                          const TextSpan(text: 'أوافق على '),
+                          TextSpan(
+                            text: 'شروط الخدمة',
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const TermsAndConditionsPage(),
+                                  ),
+                                );
+                              },
+                          ),
+                          const TextSpan(text: ' و '),
+                          TextSpan(
+                            text: 'سياسة الخصوصية',
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const PrivacyPolicyPage(),
+                                  ),
+                                );
+                              },
+                          ),
+                          const TextSpan(text: '.'),
+                        ],
+                      ),
+                      textDirection: TextDirection.rtl,
+                    ),
+                  ),
+                ),
+              ],
+            ),            const SizedBox(height: 40),
 
             LoadingButton(
               text: 'إرسال رمز التحقق',

@@ -94,13 +94,21 @@ class NotificationApiService {
   /// Register or update FCM token
   Future<void> updateFcmToken(String fcmToken) async {
     try {
-      await _apiService.post(
+      print('📤 Sending FCM token to backend...');
+      print('   Token: ${fcmToken.substring(0, 20)}...');
+      print('   Endpoint: /api/company/auth/admin/update-fcm-token');
+      
+      final response = await _apiService.post(
         '/api/company/auth/admin/update-fcm-token',
         data: {'fcmToken': fcmToken},
       );
+      
+      print('✅ FCM token sent successfully');
+      print('   Response: ${response.statusCode}');
     } catch (e) {
       // Log error but don't throw - FCM token update is not critical
       print('❌ Failed to update FCM token: $e');
+      print('   This is not critical - app will continue to work');
     }
   }
 

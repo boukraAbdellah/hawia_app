@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
@@ -6,6 +7,8 @@ import '../models/auth_state.dart';
 import '../models/ban_details.dart';
 import '../widgets/custom_text_field.dart';
 import '../../../shared/widgets/loading_button.dart';
+import '../../../shared/terms_and_conditions_page.dart';
+import '../../../shared/privacy_policy_page.dart';
 import '../../../core/config/app_theme.dart';
 import '../../../core/services/storage_service.dart';
 
@@ -23,6 +26,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _passwordController = TextEditingController();
   bool _rememberMe = false;
   bool _hasSavedCredentials = false;
+  bool _agreedToTerms = false;
 
   @override
   void initState() {
@@ -67,6 +71,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   }
 
   void _handleSignIn() async {
+    if (!_agreedToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('يجب الموافقة على شروط الخدمة وسياسة الخصوصية'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
     if (_formKey.currentState!.validate()) {
       // Save credentials if remember me is checked
       if (_rememberMe) {
@@ -272,6 +286,75 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       textDirection: TextDirection.rtl,
                     ),
                     
+                  ],
+                ),
+                
+                
+                // Terms and Privacy Agreement Checkbox
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Checkbox(
+                      value: _agreedToTerms,
+                      onChanged: (value) {
+                        setState(() => _agreedToTerms = value ?? false);
+                      },
+                      activeColor: AppColors.primary,
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: RichText(
+                          text: TextSpan(
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black87,
+                              fontFamily: 'Tajawal',
+                            ),
+                            children: [
+                              const TextSpan(text: 'أوافق على '),
+                              TextSpan(
+                                text: 'شروط الخدمة',
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.underline,
+                                ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const TermsAndConditionsPage(),
+                                      ),
+                                    );
+                                  },
+                              ),
+                              const TextSpan(text: ' و '),
+                              TextSpan(
+                                text: 'سياسة الخصوصية',
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.underline,
+                                ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const PrivacyPolicyPage(),
+                                      ),
+                                    );
+                                  },
+                              ),
+                              const TextSpan(text: '.'),
+                            ],
+                          ),
+                          textDirection: TextDirection.rtl,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 

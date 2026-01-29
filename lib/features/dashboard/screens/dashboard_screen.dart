@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../providers/dashboard_provider.dart';
 import '../widgets/container_stats_card.dart';
 import '../widgets/order_stats_card.dart';
@@ -30,11 +29,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       appBar: AppBar(
         title: const Text('لوحة التحكم'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.bug_report),
-            tooltip: 'FCM Debug',
-            onPressed: () => context.push('/fcm-debug'),
-          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.read(dashboardProvider.notifier).refresh(),
